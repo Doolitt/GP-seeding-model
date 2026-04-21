@@ -74,6 +74,7 @@ export function OwnershipChart({
                   color: '#FAF8F3',
                 }}
                 labelStyle={{ color: '#D4A85C', fontWeight: 500 }}
+                labelFormatter={(year) => `Year ${year}`}
                 formatter={(v: number) => [`${v.toFixed(1)}%`, 'Ownership']}
               />
               <Area
