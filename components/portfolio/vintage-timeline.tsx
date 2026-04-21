@@ -57,6 +57,7 @@ export function VintageTimeline({ vintages }: Props) {
                   color: '#FAF8F3',
                 }}
                 labelStyle={{ color: '#D4A85C', fontWeight: 500 }}
+                itemStyle={{ color: '#FAF8F3' }}
                 formatter={(value: number, _name: string, entry: any) => {
                   const payload = entry?.payload as VintagePoint | undefined;
                   return [
