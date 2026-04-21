@@ -46,6 +46,23 @@ export interface Assumptions {
 }
 
 export type Strategy = 'Buyout' | 'Growth' | 'Venture' | 'Credit' | 'Other';
+export type GrowthProfile = 'Conservative' | 'Base' | 'Aggressive';
+export type StepDownPace = 'Slow' | 'Standard' | 'Fast';
+
+export interface IntakeAnswers {
+  name: string;
+  strategy: Strategy;
+  dealStartYear: number;
+  totalCommitmentM: number;       // total capital across GP stake + LP funds + co-invest
+  gpStakeAllocationPct: number;   // % of total → GP stake purchase price
+  lpFundAllocationPct: number;    // % of total → LP commitments across fund family
+  // co-invest slice = 100 - gpStake - lpFund (derived, never stored)
+  fundISizeM: number;             // Fund I AUM at launch
+  growthProfile: GrowthProfile;   // fund-to-fund growth trajectory
+  netFundMoic: number;            // net MOIC to LP after fund fees & carry
+  initialOwnershipPct: number;    // seeder's opening % in GP mgmt co
+  stepDownPace: StepDownPace;     // how fast GP ownership steps down
+}
 
 export interface Deal {
   id: string;
