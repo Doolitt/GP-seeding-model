@@ -34,7 +34,8 @@ export function CashflowTable({ rows }: Props) {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="max-h-[440px] overflow-auto">
+        <div className="overflow-x-auto">
+         <div className="max-h-[440px] overflow-y-auto">
           <Table className="min-w-max">
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
@@ -125,6 +126,7 @@ export function CashflowTable({ rows }: Props) {
               ))}
             </TableBody>
           </Table>
+         </div>
         </div>
       </CardContent>
     </Card>
