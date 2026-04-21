@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Trash2 } from 'lucide-react';
@@ -35,9 +35,9 @@ const STRATEGIES: Strategy[] = [
 export default function DealPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = use(params);
+  const { id } = params;
   const router = useRouter();
   const { deals, loaded, updateDeal, removeDeal } = usePortfolio();
 
