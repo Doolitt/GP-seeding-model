@@ -5,7 +5,10 @@ import { fmtM, fmtPct } from '@/lib/utils';
 import type { ModelOutput } from '@/types';
 
 export function ValueBreakdown({ output }: { output: ModelOutput }) {
-  const segments = [
+  const lpFundNet =
+    output.totals.totalLpDistributions + output.totals.totalLpCalls;
+
+  const allSegments = [
     {
       label: 'Management Fees',
       value: output.totals.totalFeeCF,
@@ -24,7 +27,23 @@ export function ValueBreakdown({ output }: { output: ModelOutput }) {
       pct: output.breakdown.terminalPct,
       color: '#6B8068',
     },
+    {
+      label: 'LP Fund Returns',
+      value: lpFundNet,
+      pct: output.breakdown.lpFundPct,
+      color: '#4A7C9E',
+    },
+    {
+      label: 'Co-Invest Returns',
+      value: output.totals.totalCoInvestNet,
+      pct: output.breakdown.coInvestPct,
+      color: '#8B6DB5',
+    },
   ];
+
+  // Only show segments that have a non-trivial value
+  const visibleSegments = allSegments.filter((s) => Math.abs(s.value) > 0.01);
+  const barSegments = allSegments.filter((s) => s.pct > 0);
 
   return (
     <Card>
@@ -35,9 +54,8 @@ export function ValueBreakdown({ output }: { output: ModelOutput }) {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Stacked horizontal bar */}
         <div className="flex h-2 w-full overflow-hidden rounded-full mb-4">
-          {segments.map((s) => (
+          {barSegments.map((s) => (
             <div
               key={s.label}
               style={{
@@ -48,7 +66,7 @@ export function ValueBreakdown({ output }: { output: ModelOutput }) {
           ))}
         </div>
         <div className="space-y-3">
-          {segments.map((s) => (
+          {visibleSegments.map((s) => (
             <div key={s.label} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span
@@ -59,7 +77,7 @@ export function ValueBreakdown({ output }: { output: ModelOutput }) {
               </div>
               <div className="flex items-baseline gap-3 tabular">
                 <span className="text-xs text-muted-foreground">
-                  {fmtPct(s.pct, 0)}
+                  {s.pct > 0 ? fmtPct(s.pct, 0) : '—'}
                 </span>
                 <span className="text-sm font-medium w-20 text-right">
                   {fmtM(s.value)}

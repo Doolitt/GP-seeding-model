@@ -1,5 +1,6 @@
 import type {
   Assumptions,
+  CoInvest,
   Deal,
   Fund,
   OwnershipStep,
@@ -36,6 +37,10 @@ export function makeFundsFromAum(firmAumM: number, moic: number): Fund[] {
     moic,
     realizationStartYr: realizeStart[i],
     realizationEndYr: realizeEnd[i],
+    lpCommitment: 0,
+    callYears: 4,
+    distYears: 7,
+    netMoic: 1.7,
   }));
 }
 
@@ -48,6 +53,7 @@ export function buildAssumptions(a: WizardAnswers): Assumptions {
     terminalMultiple: 15,
     exitYear: 15,
     discountRate: 0.1,
+    coInvests: [],
   };
 }
 
@@ -93,6 +99,21 @@ export function newFund(name = 'New Fund'): Fund {
     moic: 2.0,
     realizationStartYr: 5,
     realizationEndYr: 10,
+    lpCommitment: 0,
+    callYears: 4,
+    distYears: 7,
+    netMoic: 1.7,
+  };
+}
+
+export function newCoInvest(name = 'Co-Investment'): CoInvest {
+  return {
+    id: `co-${uuid().slice(0, 8)}`,
+    name,
+    commitment: 10,
+    vintageYear: 3,
+    exitYear: 8,
+    moic: 2.5,
   };
 }
 

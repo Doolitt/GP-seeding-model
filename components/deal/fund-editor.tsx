@@ -103,6 +103,48 @@ export function FundEditor({ fund, onChange, onRemove }: Props) {
           step={1}
         />
       </div>
+
+      <div className="mt-4 pt-4 border-t border-border/50">
+        <div className="eyebrow mb-3">LP Position (optional)</div>
+        <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+          <SliderInput
+            label="LP commitment"
+            suffix="M"
+            value={fund.lpCommitment ?? 0}
+            onChange={(v) => patch('lpCommitment', v)}
+            min={0}
+            max={500}
+            step={5}
+            help="Seeder's capital committed as LP"
+          />
+          <SliderInput
+            label="Net MOIC to LP"
+            suffix="x"
+            value={fund.netMoic ?? 1.7}
+            onChange={(v) => patch('netMoic', v)}
+            min={0.5}
+            max={4}
+            step={0.1}
+            help="After fund fees & carry"
+          />
+          <SliderInput
+            label="Call years"
+            value={fund.callYears ?? 4}
+            onChange={(v) => patch('callYears', v)}
+            min={1}
+            max={8}
+            step={1}
+          />
+          <SliderInput
+            label="Dist years"
+            value={fund.distYears ?? 7}
+            onChange={(v) => patch('distYears', v)}
+            min={1}
+            max={12}
+            step={1}
+          />
+        </div>
+      </div>
     </Card>
   );
 }

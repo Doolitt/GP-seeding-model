@@ -6,8 +6,9 @@ import { SliderInput } from './slider-input';
 import { FundEditor } from './fund-editor';
 import { OwnershipEditor } from './ownership-editor';
 import { Plus } from 'lucide-react';
-import { newFund } from '@/lib/defaults';
-import type { Assumptions, Fund, OwnershipStep } from '@/types';
+import { newFund, newCoInvest } from '@/lib/defaults';
+import { CoInvestEditor } from './coinvest-editor';
+import type { Assumptions, CoInvest, Fund, OwnershipStep } from '@/types';
 
 interface Props {
   assumptions: Assumptions;
@@ -40,6 +41,29 @@ export function AssumptionsEditor({ assumptions, onChange }: Props) {
         realizationStartYr: (assumptions.funds.at(-1)?.realizationStartYr ?? 5) + 4,
         realizationEndYr: (assumptions.funds.at(-1)?.realizationEndYr ?? 10) + 4,
       },
+    ]);
+  };
+
+  const coInvests = assumptions.coInvests ?? [];
+
+  const updateCoInvest = (id: string, co: CoInvest) =>
+    patch(
+      'coInvests',
+      coInvests.map((c) => (c.id === id ? co : c)),
+    );
+
+  const removeCoInvest = (id: string) =>
+    patch(
+      'coInvests',
+      coInvests.filter((c) => c.id !== id),
+    );
+
+  const addCoInvest = () => {
+    const lastVintage = coInvests.at(-1)?.vintageYear ?? 2;
+    const lastExit = coInvests.at(-1)?.exitYear ?? 7;
+    patch('coInvests', [
+      ...coInvests,
+      { ...newCoInvest(`Co-Invest ${coInvests.length + 1}`), vintageYear: lastVintage + 1, exitYear: lastExit + 1 },
     ]);
   };
 
@@ -115,6 +139,31 @@ export function AssumptionsEditor({ assumptions, onChange }: Props) {
               fund={f}
               onChange={(u) => updateFund(f.id, u)}
               onRemove={() => removeFund(f.id)}
+            />
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+          <CardTitle>Co-Investments</CardTitle>
+          <Button variant="outline" size="sm" onClick={addCoInvest}>
+            <Plus className="h-3 w-3 mr-1" />
+            Add co-invest
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {coInvests.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No co-investments. Add one to model direct deal economics.
+            </p>
+          )}
+          {coInvests.map((co) => (
+            <CoInvestEditor
+              key={co.id}
+              co={co}
+              onChange={(u) => updateCoInvest(co.id, u)}
+              onRemove={() => removeCoInvest(co.id)}
             />
           ))}
         </CardContent>

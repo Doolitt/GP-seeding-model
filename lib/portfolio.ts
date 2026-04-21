@@ -98,8 +98,9 @@ export function runPortfolio(deals: Deal[]): PortfolioOutput {
   }
 
   const portfolioCFs = rows.map((r) => r.total);
-  const totalInvested = active.reduce(
-    (s, d) => s + d.assumptions.seedInvestmentM,
+  // Use each deal's full capital deployed (GP stake + LP calls + co-invest calls)
+  const totalInvested = results.reduce(
+    (s, r) => s + r.output.totals.totalInvested,
     0,
   );
   const totalValueM = results.reduce((s, r) => s + r.output.kpis.totalValueM, 0);
@@ -111,7 +112,7 @@ export function runPortfolio(deals: Deal[]): PortfolioOutput {
       dealId: deal.id,
       name: deal.name,
       strategy: deal.strategy,
-      invested: deal.assumptions.seedInvestmentM,
+      invested: output.totals.totalInvested,
       totalValue: output.kpis.totalValueM,
       moic: output.kpis.moic,
       irr: output.kpis.irr,

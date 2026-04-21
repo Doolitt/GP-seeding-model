@@ -22,6 +22,9 @@ interface Props {
 }
 
 export function CashflowTable({ rows }: Props) {
+  const hasLp = rows.some((r) => r.lpCapitalCalls !== 0 || r.lpDistributions !== 0);
+  const hasCo = rows.some((r) => r.coInvestCF !== 0);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -42,6 +45,15 @@ export function CashflowTable({ rows }: Props) {
                 <TableHead className="text-right">Fee CF</TableHead>
                 <TableHead className="text-right">Carry CF</TableHead>
                 <TableHead className="text-right">Term CF</TableHead>
+                {hasLp && (
+                  <>
+                    <TableHead className="text-right">LP Calls</TableHead>
+                    <TableHead className="text-right">LP Dist</TableHead>
+                  </>
+                )}
+                {hasCo && (
+                  <TableHead className="text-right">Co-inv</TableHead>
+                )}
                 <TableHead className="text-right">Total CF</TableHead>
                 <TableHead className="text-right">Cum CF</TableHead>
               </TableRow>
@@ -68,6 +80,31 @@ export function CashflowTable({ rows }: Props) {
                   <TableCell className="font-mono text-xs text-right tabular">
                     {r.seederTerminalCF > 0 ? fmtM(r.seederTerminalCF) : '—'}
                   </TableCell>
+                  {hasLp && (
+                    <>
+                      <TableCell
+                        className={cn(
+                          'font-mono text-xs text-right tabular',
+                          r.lpCapitalCalls < 0 ? 'text-rust' : 'text-muted-foreground',
+                        )}
+                      >
+                        {r.lpCapitalCalls !== 0 ? fmtM(r.lpCapitalCalls) : '—'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-right tabular">
+                        {r.lpDistributions > 0 ? fmtM(r.lpDistributions) : '—'}
+                      </TableCell>
+                    </>
+                  )}
+                  {hasCo && (
+                    <TableCell
+                      className={cn(
+                        'font-mono text-xs text-right tabular',
+                        r.coInvestCF < 0 ? 'text-rust' : '',
+                      )}
+                    >
+                      {r.coInvestCF !== 0 ? fmtM(r.coInvestCF) : '—'}
+                    </TableCell>
+                  )}
                   <TableCell
                     className={cn(
                       'font-mono text-xs text-right tabular font-medium',

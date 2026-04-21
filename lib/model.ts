@@ -1,5 +1,6 @@
 import type {
   Assumptions,
+  CoInvest,
   Fund,
   ModelOutput,
   OwnershipStep,
@@ -34,6 +35,39 @@ function fundCarry(fund: Fund, year: number): number {
   const totalCarry = Math.max(0, profit) * fund.carryRate;
   const windowYrs = fund.realizationEndYr - fund.realizationStartYr + 1;
   return windowYrs > 0 ? totalCarry / windowYrs : 0;
+}
+
+// LP cash flows — seeder's commitment as a limited partner in each fund.
+// Uses ?? to remain backward-compatible with deals missing LP fields.
+function getFundCapitalCall(fund: Fund, year: number): number {
+  const lpCommitment = fund.lpCommitment ?? 0;
+  if (!fund.enabled || lpCommitment === 0) return 0;
+  const callYears = fund.callYears ?? 4;
+  const start = fund.vintageYear;
+  const end = start + callYears;
+  if (year >= start && year < end) return -lpCommitment / callYears;
+  return 0;
+}
+
+function getFundDistribution(fund: Fund, year: number): number {
+  const lpCommitment = fund.lpCommitment ?? 0;
+  if (!fund.enabled || lpCommitment === 0) return 0;
+  const distYears = fund.distYears ?? 7;
+  const netMoic = fund.netMoic ?? 1.7;
+  const start = fund.realizationStartYr;
+  const end = start + distYears;
+  // Total distributed = lpCommitment * netMoic (net MOIC already accounts for
+  // fund fees and carry, so we do NOT subtract them again here).
+  if (year >= start && year < end) return (lpCommitment * netMoic) / distYears;
+  return 0;
+}
+
+// Co-invest: single capital call at vintageYear, single distribution at exitYear.
+// No fees or carry — gross MOIC applied directly.
+function getCoInvestCashFlow(co: CoInvest, year: number): number {
+  if (year === co.vintageYear) return -co.commitment;
+  if (year === co.exitYear) return co.commitment * co.moic;
+  return 0;
 }
 
 // Newton-Raphson IRR with bisection fallback
@@ -79,11 +113,13 @@ export function irr(cashflows: number[], guess = 0.1): number {
 
 export function runModel(a: Assumptions): ModelOutput {
   const horizon = a.exitYear;
+  const coInvests = a.coInvests ?? [];
   const rows: YearRow[] = [];
 
   for (let year = 0; year <= horizon; year++) {
     const { gpOwnership, carryShare } = ownershipAt(a.ownershipSchedule, year);
 
+    // GP economics
     const mgmtFeeRevenue = a.funds.reduce(
       (s, f) => s + fundMgmtFee(f, year),
       0,
@@ -100,9 +136,33 @@ export function runModel(a: Assumptions): ModelOutput {
       seederTerminalCF = fre * a.terminalMultiple * exitOwn;
     }
 
+    // GP stake purchase (year 0)
     const seederInvestment = year === 0 ? -a.seedInvestmentM : 0;
+
+    // LP capital flows
+    const lpCapitalCalls = a.funds.reduce(
+      (s, f) => s + getFundCapitalCall(f, year),
+      0,
+    );
+    const lpDistributions = a.funds.reduce(
+      (s, f) => s + getFundDistribution(f, year),
+      0,
+    );
+
+    // Co-invest flows
+    const coInvestCF = coInvests.reduce(
+      (s, co) => s + getCoInvestCashFlow(co, year),
+      0,
+    );
+
     const seederTotalCF =
-      seederFeeCF + seederCarryCF + seederTerminalCF + seederInvestment;
+      seederFeeCF +
+      seederCarryCF +
+      seederTerminalCF +
+      seederInvestment +
+      lpCapitalCalls +
+      lpDistributions +
+      coInvestCF;
 
     const prevCum = year === 0 ? 0 : rows[year - 1].cumulativeCF;
 
@@ -117,18 +177,35 @@ export function runModel(a: Assumptions): ModelOutput {
       seederCarryCF,
       seederTerminalCF,
       seederInvestment,
+      lpCapitalCalls,
+      lpDistributions,
+      coInvestCF,
       seederTotalCF,
       cumulativeCF: prevCum + seederTotalCF,
     });
   }
 
+  // Totals
   const totalFeeCF = rows.reduce((s, r) => s + r.seederFeeCF, 0);
   const totalCarryCF = rows.reduce((s, r) => s + r.seederCarryCF, 0);
   const totalTerminalCF = rows.reduce((s, r) => s + r.seederTerminalCF, 0);
-  const totalInflows = totalFeeCF + totalCarryCF + totalTerminalCF;
-  const totalInvested = a.seedInvestmentM;
+  const totalLpDistributions = rows.reduce((s, r) => s + r.lpDistributions, 0);
+  const totalLpCalls = rows.reduce((s, r) => s + r.lpCapitalCalls, 0);
+  const totalCoInvestNet = rows.reduce((s, r) => s + r.coInvestCF, 0);
 
+  // MOIC per spec: sum(positive CFs) / |sum(negative CFs)|
+  const totalInflows = rows.reduce(
+    (s, r) => s + Math.max(0, r.seederTotalCF),
+    0,
+  );
+  const totalOutflows = rows.reduce(
+    (s, r) => s + Math.min(0, r.seederTotalCF),
+    0,
+  );
+  const totalInvested = Math.abs(totalOutflows);
+  const netProfit = totalInflows - totalInvested;
   const moic = totalInvested > 0 ? totalInflows / totalInvested : 0;
+
   const irrVal = irr(rows.map((r) => r.seederTotalCF));
 
   let paybackYear: number | null = null;
@@ -139,16 +216,29 @@ export function runModel(a: Assumptions): ModelOutput {
     }
   }
 
-  const sum = totalInflows || 1;
+  // Breakdown: each component as share of total positive value.
+  // LP and co-invest use net return (distributions − calls); only positive
+  // net returns contribute to the stacked bar.
+  const lpFundNet = totalLpDistributions + totalLpCalls;
+  const bDenom =
+    totalFeeCF +
+      totalCarryCF +
+      totalTerminalCF +
+      Math.max(0, lpFundNet) +
+      Math.max(0, totalCoInvestNet) || 1;
+
   return {
     rows,
     totals: {
       totalFeeCF,
       totalCarryCF,
       totalTerminalCF,
+      totalLpDistributions,
+      totalLpCalls,
+      totalCoInvestNet,
       totalInflows,
       totalInvested,
-      netProfit: totalInflows - totalInvested,
+      netProfit,
     },
     kpis: {
       moic,
@@ -157,9 +247,11 @@ export function runModel(a: Assumptions): ModelOutput {
       totalValueM: totalInflows,
     },
     breakdown: {
-      feesPct: totalFeeCF / sum,
-      carryPct: totalCarryCF / sum,
-      terminalPct: totalTerminalCF / sum,
+      feesPct: totalFeeCF / bDenom,
+      carryPct: totalCarryCF / bDenom,
+      terminalPct: totalTerminalCF / bDenom,
+      lpFundPct: Math.max(0, lpFundNet) / bDenom,
+      coInvestPct: Math.max(0, totalCoInvestNet) / bDenom,
     },
   };
 }
