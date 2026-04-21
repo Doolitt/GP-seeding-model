@@ -125,8 +125,8 @@ export function PortfolioCashflow({ rows, deals }: Props) {
               <Line
                 type="monotone"
                 dataKey="cumulative"
-                stroke="#FAF8F3"
-                strokeWidth={2}
+                stroke="#B8863F"
+                strokeWidth={2.5}
                 dot={false}
                 strokeDasharray="4 4"
               />
