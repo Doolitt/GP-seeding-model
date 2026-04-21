@@ -66,16 +66,15 @@ export function OwnershipChart({
                 domain={[0, 'auto']}
               />
               <Tooltip
-                contentStyle={{
-                  background: '#0F1629',
-                  border: 'none',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  color: '#FAF8F3',
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div style={{ background: '#0F1629', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#FAF8F3' }}>
+                      <div style={{ color: '#D4A85C', fontWeight: 500, marginBottom: 4 }}>Year {label}</div>
+                      <div>{Number(payload[0].value).toFixed(1)}% Ownership</div>
+                    </div>
+                  );
                 }}
-                labelStyle={{ color: '#D4A85C', fontWeight: 500 }}
-                labelFormatter={(year) => `Year ${year}`}
-                formatter={(v: number) => [`${v.toFixed(1)}%`, 'Ownership']}
               />
               <Area
                 type="stepAfter"
